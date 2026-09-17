@@ -26,54 +26,58 @@ A retrieval-based question-answering system that searches city guides to answer 
 
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** 800 characters  
+**Overlap:** 120 characters  
+**Strategy:** Hierarchical chunking that respects document structure
 
-<!-- What about YOUR documents made you pick these numbers? Short posts and
-     long sectioned guides don't want the same chunking, and "800 seemed
-     reasonable" earns nothing. Point at something you noticed when you read
-     the documents in Milestone 1.
+The city guides are structured with section headings (##) and complete paragraphs. A naive fixed-size chunker would cut sentences in half, breaking meaning. This chunker:
+1. Splits on section boundaries (## headings)
+2. Keeps sections ≤800 chars as one chunk
+3. Splits larger sections by paragraph boundaries
+4. Only uses fixed-size overlap (120 chars) for oversized individual paragraphs
 
-     If you changed your mind partway through, say so and say why. That's worth
-     more than pretending you got it right first time.
-
-     Milestone 3. -->
+This preserves complete thoughts. For example, the "Straightforward" accessibility section (3 towns, 420 chars) stays as one chunk instead of being split mid-paragraph.
 
 ## Sample Chunks
 
-<!-- Five chunks, pasted as text. Label each one and name the file it came from
-     AND the function that produced it — the grader checks your code against
-     what you claim here.
+**Chunk 1** — source: guide_accessibility.md#0  |  produced by: chunker.py::split_documents
+======================================================================
+# Getting around the region with limited mobility
 
-     `python app.py chunks -n 5` prints all three for you. Copy them straight
-     across.
+An honest assessment rather than a promotional one. Some of these places are
+difficult and it is better to know in advance.
 
-     Milestone 3. -->
+**Chunk 2** — source: guide_corry_vale.md#5  |  produced by: chunker.py::split_documents
+======================================================================
+# Corry Vale
 
-**Chunk 1** — source: `` — produced by: ``
+## Where to stay
 
-```
-```
+Perhaps thirty beds in the entire valley, spread across two pubs and a handful of farmhouse rooms. In summer these are booked months ahead. Camping is permitted on two marked fields and nowhere else.
 
-**Chunk 2** — source: `` — produced by: ``
+**Chunk 3** — source: guide_givens_mill.md#2  |  produced by: chunker.py::split_documents
+======================================================================
+# Givens Mill
 
-```
-```
+## Getting around
 
-**Chunk 3** — source: `` — produced by: ``
+Everything is on one street along the river. The mill is at one end and the church at the other, eight minutes apart. The riverside path continues in both directions for as far as you want to walk.
 
-```
-```
+**Chunk 4** — source: guide_kestrelford.md#4  |  produced by: chunker.py::split_documents
+======================================================================
+# Kestrelford
 
-**Chunk 4** — source: `` — produced by: ``
+## What to see
 
-```
-```
+The market square on a Saturday morning is the main event and has run continuously since the 1400s. The parish church has a 13th-century tower you can climb for £2. The old trackbed walk runs six miles to the next village along an easy gradient and is the best half-day here.
 
-**Chunk 5** — source: `` — produced by: ``
+**Chunk 5** — source: guide_pellew_sands.md#6  |  produced by: chunker.py::split_documents
+======================================================================
+# Pellew Sands
 
-```
-```
+## When to go
+
+June and September for the beach without the crowds. July and August are busy and the town is at its most itself, for better and worse. Winter is bleak, largely closed, and has a following among people who like that sort of thing.
 
 ## Sample Answer
 
