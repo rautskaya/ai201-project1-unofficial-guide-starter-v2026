@@ -22,11 +22,7 @@
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+A retrieval-based question-answering system that searches city guides to answer user queries. The user asks about topics such as restaurants, accessibility, travel times, or attractions. The system retrieves relevant information from the guide corpus and provides grounded answers with source attribution. When sufficient information is not available, the system returns a refusal rather than generating unsupported answers.
 
 ## Chunking Strategy
 

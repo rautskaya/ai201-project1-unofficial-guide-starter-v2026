@@ -82,22 +82,188 @@ def fallback_split(
 
 def split_documents(documents: list[Document]) -> list[Chunk]:
     """
-    Split documents into chunks. ⚠️ REPLACE THE BODY OF THIS IN MILESTONE 3.
+    Split documents hierarchically by section headings, then by paragraph.
 
-    Right now it just calls the fallback. That is the plain, generic behaviour
-    the brief is talking about.
+    Strategy:
+    1. Split on ## headings (section boundaries)
+    2. Keep sections <= 800 chars as one chunk
+    3. Split larger sections by paragraph, combining until ~800 chars
+    4. For individual paragraphs > 800 chars, use fixed-size overlap fallback
 
-    When you write your own strategy, set `produced_by` to
-    "chunker.py::split_documents" so your README's Sample Chunks section names
-    the right function. `app.py chunks` prints that string for you.
-
-    Things worth thinking about before you write any code:
-      - Are your documents short posts or long guides?
-      - Is the useful information in one sentence, or spread over a paragraph?
-      - Would splitting on paragraph breaks keep more thoughts intact than
-        splitting on a character count?
+    Preserves document title and section heading in each chunk for context.
     """
-    return fallback_split(documents)
+    chunk_size = config.CHUNK_SIZE  # 800
+    overlap = config.CHUNK_OVERLAP  # 120
+    chunks: list[Chunk] = []
+
+    for doc in documents:
+        # Parse document into sections (returns dict with doc_title and sections list)
+        parsed = _parse_sections(doc.text)
+        doc_title = parsed["title"]
+        sections = parsed["sections"]
+
+        chunk_index = 0
+        for section in sections:
+            section_heading = section["heading"]
+            section_text = section["text"].strip()
+
+            if not section_text:
+                continue
+
+            # If section is small enough, keep as one chunk
+            if len(section_text) <= chunk_size:
+                chunk_text = _format_chunk(doc_title, section_heading, section_text)
+                chunks.append(
+                    Chunk(
+                        text=chunk_text,
+                        source=doc.source,
+                        index=chunk_index,
+                        produced_by="chunker.py::split_documents",
+                    )
+                )
+                chunk_index += 1
+            else:
+                # Split by paragraphs
+                paragraphs = [p.strip() for p in section_text.split("\n\n") if p.strip()]
+                current_chunk_text = ""
+
+                for para in paragraphs:
+                    # If paragraph itself is too large, use fixed-size fallback
+                    if len(para) > chunk_size:
+                        # Flush current chunk first
+                        if current_chunk_text:
+                            chunk_text = _format_chunk(
+                                doc_title, section_heading, current_chunk_text
+                            )
+                            chunks.append(
+                                Chunk(
+                                    text=chunk_text,
+                                    source=doc.source,
+                                    index=chunk_index,
+                                    produced_by="chunker.py::split_documents",
+                                )
+                            )
+                            chunk_index += 1
+                            current_chunk_text = ""
+
+                        # Apply fixed-size overlap to the large paragraph
+                        para_chunks = _fixed_size_split(para, chunk_size, overlap)
+                        for para_chunk in para_chunks:
+                            chunk_text = _format_chunk(
+                                doc_title, section_heading, para_chunk
+                            )
+                            chunks.append(
+                                Chunk(
+                                    text=chunk_text,
+                                    source=doc.source,
+                                    index=chunk_index,
+                                    produced_by="chunker.py::split_documents",
+                                )
+                            )
+                            chunk_index += 1
+                    else:
+                        # Try to add paragraph to current chunk
+                        potential = (
+                            (current_chunk_text + "\n\n" + para)
+                            if current_chunk_text
+                            else para
+                        )
+                        if len(potential) <= chunk_size:
+                            current_chunk_text = potential
+                        else:
+                            # Paragraph doesn't fit; start new chunk
+                            if current_chunk_text:
+                                chunk_text = _format_chunk(
+                                    doc_title, section_heading, current_chunk_text
+                                )
+                                chunks.append(
+                                    Chunk(
+                                        text=chunk_text,
+                                        source=doc.source,
+                                        index=chunk_index,
+                                        produced_by="chunker.py::split_documents",
+                                    )
+                                )
+                                chunk_index += 1
+                            current_chunk_text = para
+
+                # Flush final chunk
+                if current_chunk_text:
+                    chunk_text = _format_chunk(
+                        doc_title, section_heading, current_chunk_text
+                    )
+                    chunks.append(
+                        Chunk(
+                            text=chunk_text,
+                            source=doc.source,
+                            index=chunk_index,
+                            produced_by="chunker.py::split_documents",
+                        )
+                    )
+                    chunk_index += 1
+
+    return chunks
+
+
+def _parse_sections(text: str) -> dict:
+    """Parse markdown into document title and sections by ## headings.
+
+    Returns dict with:
+      'title': document title from # line
+      'sections': list of dicts with 'heading' and 'text' keys
+
+    Treats # (single hash) as document title, ## as section boundaries.
+    """
+    lines = text.split("\n")
+    doc_title = ""
+    sections = []
+    current_heading = ""
+    current_text = []
+
+    for line in lines:
+        if line.startswith("##"):
+            # Save previous section
+            if current_heading or current_text:
+                sections.append(
+                    {"heading": current_heading, "text": "\n".join(current_text)}
+                )
+                current_text = []
+            current_heading = line.lstrip("# ").strip()
+        elif line.startswith("#") and not line.startswith("##"):
+            # Document title (single #)
+            if not doc_title:
+                doc_title = line.lstrip("# ").strip()
+        else:
+            current_text.append(line)
+
+    # Save final section
+    if current_heading or current_text:
+        sections.append({"heading": current_heading, "text": "\n".join(current_text)})
+
+    return {"title": doc_title, "sections": sections}
+
+
+def _format_chunk(doc_title: str, section_heading: str, content: str) -> str:
+    """Format a chunk with document title and section heading for context."""
+    parts = []
+    if doc_title:
+        parts.append(f"# {doc_title}")
+    if section_heading:
+        parts.append(f"## {section_heading}")
+    parts.append(content.strip())
+    return "\n\n".join(parts)
+
+
+def _fixed_size_split(text: str, chunk_size: int, overlap: int) -> list[str]:
+    """Fixed-size splitting with overlap for oversized paragraphs."""
+    chunks = []
+    start = 0
+    while start < len(text):
+        chunk = text[start : start + chunk_size].strip()
+        if chunk:
+            chunks.append(chunk)
+        start += chunk_size - overlap
+    return chunks
 
 
 def describe(chunks: list[Chunk]) -> str:
