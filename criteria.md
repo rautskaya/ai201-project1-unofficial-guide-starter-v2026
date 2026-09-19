@@ -43,11 +43,6 @@ The grounding instruction explicitly asks the model to "name the document your a
 When I ask a question my documents clearly don't cover, the relevance gate
 stops it and the system returns "I don't have enough information about that".
 
-<!-- The five questions are the ones in `OUT_OF_SCOPE` at the bottom of
-     `questions.py`, and `run_eval.py` puts them through the gate and writes
-     what happened into your run log. Swap them for your own if you'd rather —
-     just keep five of them, or the "4 of 5" above has nothing to be 4 of. -->
-
 **Why this target:**
 
 Out-of-scope questions (about mongolia, programming, sports, dosages) should have very high distances since the embeddings are about city guides. A threshold of 0.6 should catch most of them, but one might slip through due to random semantic noise. 4 of 5 is a realistic target for a well-defined boundary between in-scope and out-of-scope.

@@ -93,42 +93,27 @@ It takes about 35 minutes to walk across Brightwater from end to end (source: gu
 Sources retrieved: guide_brightwater.md, guide_pellew_sands.md, guide_regional_transport.md, guide_thornby_wells.md, guide_walking.md
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.6
 
-<!-- The number you set in config.py, and how you got there.
-
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
-
-     Milestone 4. -->
+In-scope questions landed between 0.31 and 0.57. Out-of-scope questions landed around 0.80+. There's a clear gap between the two groups, and 0.6 sits in that gap.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| How long to walk across Brightwater? | Yes | 0.307 |
+| What's the main accessibility challenge in Halden Bay? | Yes | 0.385 |
+| When does Kestrelford's bakery sell out? | Yes | 0.402 |
+| Winter weekend, best town for food + shopping? | Yes | 0.574 |
+| What is the capital of Mongolia? | No | 0.803 |
+| How do I change the oil in a diesel engine? | No | 0.888 |
+| Who won the 1994 World Cup? | No | 0.975 |
+| Recommended dosage of ibuprofen? | No | 0.798 |
+| How do I write a for loop in Rust? | No | 0.836 |
 
 ## How I Used AI
 
-<!-- Two specific moments. For each: what you asked for, what came back, and
-     what you changed about it.
+**1.** I described my chunking strategy (split on ## headings, keep sections under 800 chars, split larger sections by paragraph) and asked Claude to implement it in chunker.py. The first version had a bug: it treated the single # document title as the heading for the first section, so chunks from that section showed the title twice. It now stores the title separately from section headings.
 
-     "I asked Claude to write the chunking function from my notes. It ignored
-     the overlap, so I added that myself" is the level of detail we're after.
-     "I used AI to help me code" is not.
-
-     Milestone 5. -->
-
-**1.**
-
-**2.**
-
-<!-- ── Stretch features ─────────────────────────────────────────────────────
-     Doing one? Say so here BEFORE you start. A feature this README never
-     claims earns nothing.
-     ───────────────────────────────────────────────────────────────────────── -->
-
----
+**2.** My winter-weekend question got a best distance of 0.574, under the 0.6 cutoff, but the system still refused to answer. It explained there are two checks: the gate only looks at distance, and the model separately decides if the chunks actually answer the question. That told me the real issue was retrieval — it never pulled in guide_marchwood.md, which has the answer.
 
 # Week 2
 
