@@ -81,14 +81,16 @@ June and September for the beach without the crowds. July and August are busy an
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** How long does it take to walk across Brightwater from one end to the other?
 
 **Answer:**
 
 ```
+(best distance 0.307, cutoff 0.6)
+
+It takes about 35 minutes to walk across Brightwater from end to end (source: guide_brightwater.md).
+
+Sources retrieved: guide_brightwater.md, guide_pellew_sands.md, guide_regional_transport.md, guide_thornby_wells.md, guide_walking.md
 ```
 
 **My relevance cutoff:**
