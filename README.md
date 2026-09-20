@@ -123,27 +123,60 @@ In-scope questions landed between 0.31 and 0.57. Out-of-scope questions landed a
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+Produced by `run_eval.py::main`. Corpus: `city_guides`, top-k 5, cutoff 0.6, 3 runs per question, caching off. Full output in `results/run_2026-09-20_1546_before.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 4/5 | 4/5 | 4/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks are complete thoughts | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Answers include specific facts | 4 of 5 | 4/5 | 5/5 | 4/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+**Criterion 1** — produced by `generate.py::answer_from_chunks`. The one question that pulled this criterion down — retrieved from `guide_corry_vale.md`, `guide_eating.md`, `guide_halden_bay.md`, `guide_kestrelford.md` (never `guide_marchwood.md`, which has the actual answer):
+
+**Question:** If you're visiting on a winter weekend and need both good food options and shopping, which town is the best choice?
+
+```
+I do not have enough information to answer this question. The provided documents mention when places are open or busy, but they do not compare towns to determine which one is the "best choice" for a winter weekend with both good food options and shopping.
+
+Sources: `guide_corry_vale.md`, `guide_eating.md`, `guide_halden_bay.md`, and `guide_kestrelford.md`.
+```
+
+**Criterion 2** — produced by `generate.py::answer_from_chunks`. Every answer names its source, including this one:
+
+**Question:** When does Kestrelford's bakery typically sell out?
+
+```
+Kestrelford's bakery typically sells out by 11am (from `guide_kestrelford.md` and `guide_eating.md`).
+```
+
+**Criterion 3** — produced by `gate.py::check`, run by `run_eval.py::check_out_of_scope`. Exact row from `results/run_2026-09-20_1546_before.md`:
+
+```
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.803 | refused |
+```
+
+**Criterion 4** — this criterion is about chunk quality, which `run_eval.py` doesn't measure — `results/run_2026-09-20_1546_before.md` has no chunk data in it. This evidence instead comes from `chunker.py::split_documents`, printed by `app.py chunks -n 5` (Milestone 3):
+
+```
+Chunk 4 | source: guide_kestrelford.md#4 | produced by: chunker.py::split_documents
+# Kestrelford
+
+## What to see
+
+The market square on a Saturday morning is the main event and has run continuously since the 1400s. The parish church has a 13th-century tower you can climb for £2. The old trackbed walk runs six miles to the next village along an easy gradient and is the best half-day here.
+```
+
+**Criterion 5** — produced by `generate.py::answer_from_chunks`. Answer includes concrete facts, not vague generalizations:
+
+**Question:** How long does it take to walk across Brightwater from one end to the other?
+
+```
+It takes about 35 minutes to walk across Brightwater from end to end (Source: guide_brightwater.md).
+```
 
 ## Verdicts
 
