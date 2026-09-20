@@ -191,11 +191,11 @@ It takes about 35 minutes to walk across Brightwater from end to end (Source: gu
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer | MET | Target was 4 of 5. Got exactly 4/5 in all three runs — the winter-weekend question failed every time because `guide_marchwood.md` was never retrieved. |
+| 2 | Every answer names a source | MET | Target was 5 of 5. Got 5/5 in all three runs, including the one refused answer, which still listed the sources it checked. |
+| 3 | Gate stops out-of-corpus questions | MET | Target was 4 of 5. Got 5/5 — the gate is a single deterministic pass against a fixed threshold, so this doesn't vary by run. All five out-of-scope questions had distances well above 0.6 (0.80–0.98). |
+| 4 | Chunks are complete thoughts | MET | Target was 4 of 5 sampled. Checked the 5 chunks pasted in Sample Chunks — all 5 end with proper sentence punctuation and none cut off mid-thought. |
+| 5 | Answers include specific facts | MET | Target was 4 of 5. Got 4/5, 5/5, 4/5 across the three runs. The winter-weekend answer was the one that stayed vague in two of three runs; in the third it at least named a place and a date range. |
 
 ## Diagnoses
 
