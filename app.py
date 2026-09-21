@@ -175,6 +175,18 @@ def cmd_retrieve(args):
     print("between the two groups. Your cutoff goes in that gap.")
 
 
+def _looks_like_refusal(answer: str) -> bool:
+    """The model's own way of saying it couldn't find an answer.
+
+    Distinct from the gate's fixed REFUSAL string — this is the model
+    following GROUNDING_INSTRUCTION's "say you don't have enough
+    information" rule on its own, despite the gate having let the question
+    through. That combination — gate passed, model still empty-handed —
+    is the signal that the right chunk might exist but missed the cut.
+    """
+    return "enough information" in answer.lower()
+
+
 def ask_pipeline(
     question,
     corpus=None,
@@ -198,14 +210,23 @@ def ask_pipeline(
     decision as soon as it's made, and `on_prompt` is handed the assembled
     prompt just before it goes out — that's how `--show-prompt` shows you the
     prompt while the model is still thinking rather than after.
+
+    Escalation: raising top_k never changes the gate's decision, because the
+    single nearest chunk is already found at any top_k >= 1 — so escalating
+    on a gate refusal would be pointless. What raising top_k CAN change is
+    which chunks the model gets to read. So if the gate passes but the model
+    still says it doesn't have enough information, one retry is made with
+    config.ESCALATED_TOP_K before giving up — cheap questions never pay for
+    this, only the ones that actually need the wider net.
     """
     from store import search
     import gate
     from generate import answer_from_chunks, build_prompt
 
+    base_top_k = top_k or config.TOP_K
     results = search(
         question,
-        top_k=top_k or config.TOP_K,
+        top_k=base_top_k,
         corpus=corpus or config.CORPUS,
         variant=variant,
     )
@@ -220,6 +241,7 @@ def ask_pipeline(
         "threshold": decision.threshold,
         "sources": [],
         "prompt": None,
+        "escalated": False,
     }
 
     if not decision.passed:
@@ -231,7 +253,23 @@ def ask_pipeline(
         on_prompt(prompt)
 
     outcome["prompt"] = prompt
-    outcome["answer"] = answer_from_chunks(question, results)
+    answer = answer_from_chunks(question, results)
+
+    if _looks_like_refusal(answer) and base_top_k < config.ESCALATED_TOP_K:
+        results = search(
+            question,
+            top_k=config.ESCALATED_TOP_K,
+            corpus=corpus or config.CORPUS,
+            variant=variant,
+        )
+        prompt = build_prompt(question, results)
+        if on_prompt is not None:
+            on_prompt(prompt)
+        answer = answer_from_chunks(question, results)
+        outcome["prompt"] = prompt
+        outcome["escalated"] = True
+
+    outcome["answer"] = answer
     outcome["sources"] = sorted({r.source for r in results})
     return outcome
 
@@ -276,6 +314,9 @@ def _ask_one(
     if outcome["refused"]:
         print(f"\n{gate.REFUSAL}\n")
         return gate.REFUSAL
+
+    if outcome["escalated"]:
+        print(f"  (first attempt found nothing solid — retried with top_k={config.ESCALATED_TOP_K})")
 
     print(f"\n{outcome['answer']}\n")
     print(f"Sources retrieved: {', '.join(outcome['sources'])}\n")

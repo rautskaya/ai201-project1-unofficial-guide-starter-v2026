@@ -35,6 +35,11 @@ CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
 
 TOP_K = 5               # how many chunks to pull back per question
 
+# If the model reads the chunks and still says it doesn't have enough
+# information — even though the gate let the question through — try once
+# more with a wider net before giving up. 
+ESCALATED_TOP_K = 10
+
 # The relevance gate. If the best chunk is further away than this, the system
 # refuses to answer instead of handing the model thin material.
 #

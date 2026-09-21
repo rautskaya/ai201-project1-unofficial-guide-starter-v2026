@@ -52,7 +52,15 @@ def load_scorer():
 
 
 def run_once(question: str, top_k, threshold, corpus, variant):
-    """One question, one run. Returns the answer and what retrieval gave us."""
+    """One question, one run. Returns the answer and what retrieval gave us.
+
+    If the gate passes but the model still says it doesn't have enough
+    information, one retry is made with config.ESCALATED_TOP_K — mirrors
+    app.py::ask_pipeline so eval numbers match what `python app.py ask`
+    actually produces. Raising top_k on a gate REFUSAL wouldn't help (the
+    gate's best distance is fixed by the single nearest chunk, found at any
+    top_k >= 1), so escalation only fires after the gate has already passed.
+    """
     from store import search
     import gate
     from generate import answer_from_chunks
@@ -65,6 +73,11 @@ def run_once(question: str, top_k, threshold, corpus, variant):
 
     # cache=False on purpose. Three runs have to be three real answers.
     answer = answer_from_chunks(question, results, cache=False)
+
+    if "enough information" in answer.lower() and top_k < config.ESCALATED_TOP_K:
+        results = search(question, top_k=config.ESCALATED_TOP_K, corpus=corpus, variant=variant)
+        answer = answer_from_chunks(question, results, cache=False)
+
     return answer, results, decision
 
 

@@ -180,15 +180,6 @@ It takes about 35 minutes to walk across Brightwater from end to end (Source: gu
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     week — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
-
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
 | 1 | Retrieved chunk contains the answer | MET | Target was 4 of 5. Got exactly 4/5 in all three runs — the winter-weekend question failed every time because `guide_marchwood.md` was never retrieved. |
@@ -199,52 +190,50 @@ It takes about 35 minutes to walk across Brightwater from end to end (Source: gu
 
 ## Diagnoses
 
-**The winter-weekend question was missed every run, at retrieval.** The correct chunk (`guide_marchwood.md`: "nothing closes seasonally") never made the top 5. Mechanism: embedding similarity matches wording, not meaning — the question's words ("winter weekend," "shopping") don't overlap with the answer's words ("seasonal," "indoors," "covered market"), so it ranked 6th-8th while less-relevant but more word-similar chunks took the top 5. Didn't break Criterion 1 (4/5 still met the target exactly), but it's the same question failing all three runs.
+**Miss: the winter-weekend question ("If you're visiting on a winter weekend and need both good food options and shopping, which town is the best choice?"), all three runs.**
+
+**Stage:** retrieval.
+
+**Mechanism:** the correct chunk (`guide_marchwood.md`'s "When to go" section: "nothing closes seasonally") never made it into the top 5 results. Retrieval ranks chunks by embedding similarity, which measures wording overlap, not logical meaning. The question's words ("winter weekend," "shopping") don't overlap with the answer's words ("seasonal," "indoors," "covered market"), so the correct chunk scored a worse (higher) distance than several chunks that shared more surface vocabulary with the question but didn't actually answer it — those less-relevant chunks took the top 5 spots instead, pushing the real answer to position 6-8, just outside the cutoff.
+
+This didn't break Criterion 1 outright (4/5 still met the "at least 4 of 5" target exactly), but it's the same question failing in all three runs.
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** Added an escalation step to `ask_pipeline()` in `app.py` (and mirrored it in `run_eval.py::run_once`). The system still tries with `top_k=5` first, cheap and fast. But if the gate passes and the model still says "I don't have enough information," it retries once with `top_k=10` before giving up.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** The diagnosis showed the winter-weekend question failed because `guide_marchwood.md`'s answer chunk ranked 6th-8th by distance — just outside the `top_k=5` window — due to wording mismatch, not because the chunk didn't exist. Widening the search window for just this one hard case directly addresses that mechanism, without paying the cost of a wider search on every question.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Produced by `run_eval.py::main`. Corpus: `city_guides`, top-k 5 (escalating to 10 when needed), cutoff 0.6, 3 runs per question, caching off. Full output in `results/run_2026-09-21_0818_after.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks are complete thoughts | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Answers include specific facts | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?**
+Real output — produced by `generate.py::answer_from_chunks`, the same winter-weekend question that failed every run before:
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+**Question:** If you're visiting on a winter weekend and need both good food options and shopping, which town is the best choice?
 
-     Milestone 4. -->
+```
+Based on the provided documents, Marchwood is the best choice because it is the one place in the region that works in winter, since almost everything is indoors and nothing closes seasonally.
+
+Source: [from guide_marchwood.md]
+```
+
+**Did it help?** Yes. Before: Criterion 1 was 4/5 in every run (winter-weekend question failed all three times) and Criterion 5 dipped to 4/5 in two of three runs because that same answer stayed vague. After: both criteria hit 5/5 in every run — the winter-weekend question now correctly names Marchwood with a specific reason, in all three runs. Nothing else regressed: the other four questions' answers and sources are unchanged between the before and after logs.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
+No criterion is missed — all five hit MET after the fix. But two real limits remain:
 
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
-
-     Milestone 5. -->
+**Refusal detection is fragile.** Escalation only fires if the model's answer contains "enough information." A differently-worded refusal would slip through undetected. I didn't harden this because I only have one real refusal example to test against.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
-
-     Milestone 5. -->
+**Criterion 3's target.** I set 4 of 5, but my out-of-scope questions (Mongolia, oil changes, football) were so obviously unrelated that the gate caught 5 of 5 easily (distances 0.80+ vs. a 0.6 cutoff) — the target was never really tested. Next time I'd set it to 5 of 5 and use harder out-of-scope questions closer to my actual topic, like "best restaurant in Paris?"
