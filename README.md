@@ -199,23 +199,7 @@ It takes about 35 minutes to walk across Brightwater from end to end (Source: gu
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
-
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
-
-     The five stages: loading → chunking → embedding → retrieval → generation.
-
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
-
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
-
-     Milestone 3. -->
+**The winter-weekend question was missed every run, at retrieval.** The correct chunk (`guide_marchwood.md`: "nothing closes seasonally") never made the top 5. Mechanism: embedding similarity matches wording, not meaning — the question's words ("winter weekend," "shopping") don't overlap with the answer's words ("seasonal," "indoors," "covered market"), so it ranked 6th-8th while less-relevant but more word-similar chunks took the top 5. Didn't break Criterion 1 (4/5 still met the target exactly), but it's the same question failing all three runs.
 
 ## The Improvement
 
